@@ -1,16 +1,38 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
-import { arbitrum, base, mainnet, optimism } from "wagmi/chains";
+import {
+  arbitrum,
+  arbitrumSepolia,
+  avalancheFuji,
+  base,
+  baseSepolia,
+  mainnet,
+  optimism,
+  optimismSepolia,
+  sepolia,
+} from "wagmi/chains";
 
-export const chainsInformation = {
-  [mainnet.id]: mainnet.name,
-  [arbitrum.id]: arbitrum.name,
-  [base.id]: base.name,
-  [optimism.id]: optimism.name,
+export const MAINNET = {
+  [mainnet.id]: mainnet,
+  [arbitrum.id]: arbitrum,
+  [base.id]: base,
+  [optimism.id]: optimism,
 };
+
+export const TESTNET = {
+  [sepolia.id]: sepolia,
+  [arbitrumSepolia.id]: arbitrumSepolia,
+  [baseSepolia.id]: baseSepolia,
+  [optimismSepolia.id]: optimismSepolia,
+  [avalancheFuji.id]: avalancheFuji,
+};
+
+export const chainsInformation = process.env.NEXT_PUBLIC_TESTNET
+  ? TESTNET
+  : MAINNET;
 
 export const config = getDefaultConfig({
   appName: "RainbowKit App",
   projectId: "YOUR_PROJECT_ID",
-  chains: [mainnet, arbitrum, base, optimism],
+  chains: [mainnet, ...Object.values(chainsInformation)],
   ssr: true,
 });
