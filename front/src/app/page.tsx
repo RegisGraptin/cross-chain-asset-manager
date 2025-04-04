@@ -1,9 +1,9 @@
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+"use client";
+
 import type { NextPage } from "next";
-import Head from "next/head";
-import styles from "../styles/Home.module.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "../components/Header";
+import { useAccount } from "wagmi";
 
 // Update the getTokenData function to include USDC, WETH, WBTC
 const getTokenData = () => {
@@ -15,8 +15,29 @@ const getTokenData = () => {
 };
 
 const Home: NextPage = () => {
+  const { address: userAddress } = useAccount();
+
+  async function getCurrentValue(walletAddress: string, chainId: string) {
+    const response = await fetch("/api/tokens", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ walletAddress, chainId }),
+    });
+    const data = await response.json();
+    console.log(data);
+    return data;
+  }
+
+  useEffect(() => {
+    if (userAddress) {
+      getCurrentValue(userAddress, "1");
+    }
+  }, [userAddress]);
+
   const [selectedToken, setSelectedToken] = useState("");
-  const [userAddress, setUserAddress] = useState("");
+
   const [amount, setAmount] = useState("");
   const tokenData = getTokenData();
 
@@ -24,15 +45,9 @@ const Home: NextPage = () => {
     setSelectedToken(event.target.value);
   };
 
-  const handleAddressChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setUserAddress(event.target.value);
-  };
-
   const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setAmount(event.target.value);
   };
-
-  // https://1inch-vercel-proxy-eight.vercel.app/portfolio/portfolio/v4/overview/erc20/current_value?addresses={address}&chain_id=1
 
   return (
     <>
@@ -88,7 +103,6 @@ const Home: NextPage = () => {
                   type="text"
                   id="user-address"
                   value={userAddress}
-                  onChange={handleAddressChange}
                   className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
               </div>
