@@ -17,18 +17,17 @@ const getTokenData = () => {
 };
 
 const Home: NextPage = () => {
-  const { address: userAddress } = useAccount();
+  const { address: userAddress, chainId } = useAccount();
 
-  async function getCurrentValue(walletAddress: string, chainId: string) {
+  async function getCurrentValue(userAddress: string, chainId: number) {
     const response = await fetch("/api/tokens", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ walletAddress, chainId }),
+      body: JSON.stringify({ userAddress, chainId }),
     });
     const data = await response.json();
-    console.log(data);
     return data;
   }
 
@@ -36,10 +35,12 @@ const Home: NextPage = () => {
   const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
-    if (userAddress && !isComplete && !isLoading) {
+    if (userAddress != undefined && !isComplete && !isLoading) {
       setIsLoading(true);
 
-      getCurrentValue(userAddress, "1").then((data) => {
+      console.log(userAddress);
+
+      getCurrentValue(userAddress, chainId!).then((data) => {
         console.log(data);
         setIsLoading(false);
         setIsComplete(true);
