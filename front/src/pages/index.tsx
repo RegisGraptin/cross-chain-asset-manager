@@ -39,7 +39,10 @@ const Home: NextPage = () => {
 
       <div className="container mx-auto">
         <main className="mx-auto w-full max-w-md p-4 bg-white rounded-lg shadow-md">
-          <section className="container mx-auto">
+          <section className="container mx-auto grid grid-cols-2 gap-4">
+
+          <div>
+
             <label htmlFor="token-select" className="block text-sm font-medium text-gray-700">Select a token:</label>
             <select
               id="token-select"
@@ -64,6 +67,10 @@ const Home: NextPage = () => {
               </div>
             )}
 
+</div>
+
+<div>
+
             <div className="mt-4">
               <label htmlFor="user-address" className="block text-sm font-medium text-gray-700">User Address:</label>
               <input
@@ -84,6 +91,7 @@ const Home: NextPage = () => {
                 onChange={handleAmountChange}
                 className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
+            </div>
             </div>
           </section>
         </main>
