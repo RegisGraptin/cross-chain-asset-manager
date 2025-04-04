@@ -5,57 +5,25 @@ import { useEffect, useState } from "react";
 import Header from "../components/Header";
 import { useAccount } from "wagmi";
 import { AssetTokenSelect } from "../components/token/AssetTokenSelect";
-import { SEPOLIA_TOKEN_ASSETS } from "../utils/tokens";
-
-// Update the getTokenData function to include USDC, WETH, WBTC
-const getTokenData = () => {
-  return [
-    { token: "USDC", chains: ["Ethereum", "Polygon"], amount: 1000 },
-    { token: "WETH", chains: ["Ethereum", "Avalanche"], amount: 500 },
-    { token: "WBTC", chains: ["Bitcoin", "Ethereum"], amount: 300 },
-  ];
-};
+import { TOKEN_ASSETS } from "../utils/tokens";
+import { useAllBalances, useBalances } from "../hooks/user";
+import { chainsInformation } from "../utils/wagmi";
+import { arbitrum } from "viem/chains";
 
 const Home: NextPage = () => {
   const { address: userAddress, chainId } = useAccount();
 
-  async function getCurrentValue(userAddress: string, chainId: number) {
-    const response = await fetch("/api/tokens", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ userAddress, chainId }),
-    });
-    const data = await response.json();
-    return data;
-  }
+  // const { data: userBalances } = useBalances(userAddress, chainId);
+  const { data: userBalances } = useAllBalances(userAddress);
+  console.log("User Balances:", userBalances);
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
-
-  useEffect(() => {
-    if (userAddress != undefined && !isComplete && !isLoading) {
-      setIsLoading(true);
-
-      console.log(userAddress);
-
-      getCurrentValue(userAddress, chainId!).then((data) => {
-        console.log(data);
-        setIsLoading(false);
-        setIsComplete(true);
-      });
-    }
-  }, [userAddress]);
-
-  const [selectedToken, setSelectedToken] = useState("");
+  const [selectedToken, setSelectedToken] = useState<
+    keyof typeof TOKEN_ASSETS | ""
+  >("");
 
   const [amount, setAmount] = useState("");
-  const tokenData = getTokenData();
 
-  const handleTokenChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedToken(event.target.value);
-  };
+  console.log("Selected token:", selectedToken);
 
   const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setAmount(event.target.value);
@@ -70,7 +38,7 @@ const Home: NextPage = () => {
           <section className="container grid grid-cols-2 gap-4">
             <div className="w-100 mx-auto">
               <AssetTokenSelect
-                tokens={Object.values(SEPOLIA_TOKEN_ASSETS)}
+                tokens={Object.values(TOKEN_ASSETS)}
                 selected={selectedToken}
                 onChange={(value) => {
                   setSelectedToken(value);
@@ -83,9 +51,14 @@ const Home: NextPage = () => {
                     Available on Chains:
                   </h2>
                   <ul className="list-disc list-inside">
-                    {tokenData
-                      .find((token) => token.token === selectedToken)
-                      ?.chains.map((chain) => <li key={chain}>{chain}</li>)}
+                    {Object.entries(TOKEN_ASSETS[selectedToken].data).map(
+                      ([chainId, value]) => (
+                        <li key={chainId}>
+                          {chainsInformation[chainId]} -{" "}
+                          {userBalances[chainId][value.toLowerCase()]}
+                        </li>
+                      )
+                    )}
                   </ul>
                 </div>
               )}

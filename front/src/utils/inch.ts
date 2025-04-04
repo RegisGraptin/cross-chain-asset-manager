@@ -5,3 +5,9 @@ export async function getCurrentValue(walletAddress: string, chainId: string) {
   console.log("Fetched data:", data);
   return data;
 }
+
+export async function getUserBalance(walletAddress: string, chainId: string) {
+  const endpoint = `${process.env.NEXT_PUBLIC_INCH_PROXY}/balance/v1.2/${chainId}/balances/${walletAddress}`;
+  const data = await fetch(endpoint).then((res) => res.json());
+  return data;
+}

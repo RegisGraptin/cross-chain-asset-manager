@@ -1,4 +1,5 @@
 import { Address } from "viem";
+import { arbitrum, base, mainnet, optimism } from "viem/chains";
 
 export interface Balance {
   decimals: number;
@@ -6,11 +7,25 @@ export interface Balance {
 }
 
 export interface Token {
-  address: Address;
   name: string;
   symbol: string;
-  decimals: number;
 }
+
+// https://developers.circle.com/stablecoins/usdc-on-main-networks
+export const USDC = {
+  [mainnet.id]: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+  [arbitrum.id]: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+  [base.id]: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+  [optimism.id]: "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+};
+
+export const TOKEN_ASSETS = {
+  USDC: {
+    name: "USDC",
+    symbol: "USDC",
+    data: USDC,
+  },
+};
 
 export const SEPOLIA_TOKEN_ASSETS: Record<string, Token> = {
   "0x68194a729c2450ad26072b3d33adacbcef39d574": {

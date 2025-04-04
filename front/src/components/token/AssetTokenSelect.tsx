@@ -11,7 +11,7 @@ export const AssetTokenSelect = ({
   selected: string;
   onChange: (value: string) => void;
 }) => {
-  const selectedToken = tokens.find((t) => t.address === selected);
+  const selectedToken = tokens.find((t) => t.name === selected);
 
   return (
     <Listbox value={selected} onChange={onChange}>
@@ -40,9 +40,9 @@ export const AssetTokenSelect = ({
         <Listbox.Options className="absolute z-10 w-full py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg max-h-60 ring-1 ring-black ring-opacity-5 focus:outline-none">
           {tokens.map((token) => (
             <Listbox.Option
-              key={token.address}
-              value={token.address}
-              className={({ active }) =>
+              key={token.name}
+              value={token.name}
+              className={({ active }: { active: boolean }) =>
                 `cursor-default select-none relative py-2 pl-4 pr-4 ${
                   active ? "bg-blue-50" : "text-gray-900"
                 }`
