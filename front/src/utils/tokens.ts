@@ -1,4 +1,4 @@
-import { Address } from "viem";
+import { Address, formatUnits } from "viem";
 import {
   arbitrum,
   arbitrumSepolia,
@@ -41,4 +41,19 @@ export const TOKEN_ASSETS = {
     symbol: "USDC",
     data: process.env.NEXT_PUBLIC_TESTNET ? USDC_TESTNET : USDC_MAINNET,
   },
+};
+
+export const formatBalance = (value?: bigint, decimals?: number) => {
+  if (!value || decimals === undefined) return "0";
+
+  const formattedValue = formatUnits(value, decimals);
+  const [integerPart, decimalPart] = formattedValue.split(".");
+
+  // Show only the last 4 decimals
+  const truncatedDecimalPart = decimalPart ? decimalPart.slice(0, 4) : "";
+  const truncatedValue = truncatedDecimalPart
+    ? `${integerPart}.${truncatedDecimalPart}`
+    : integerPart;
+
+  return truncatedValue;
 };

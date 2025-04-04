@@ -12,7 +12,7 @@ import {
   MAX_FEE_PARAMETER,
 } from "../../utils/circle";
 
-type Phase = "checkChain" | "approve" | "burn" | "retrieve" | "completed";
+type Phase = "checkChain" | "approve" | "burn" | "mint" | "completed";
 type TransactionStatus = "idle" | "processing" | "success" | "error";
 
 const AggregateAction = ({ targetChain }: { targetChain: number }) => {
@@ -192,26 +192,87 @@ const AggregateAction = ({ targetChain }: { targetChain: number }) => {
         const attestation = await retrieveAttestation(burnTx as string);
         console.log(attestation);
 
+        setCurrentPhase("mint");
         await handleSwitchChain(
           targetChain === sepolia.id ? sepolia : avalancheFuji
         );
         await mintUSDC(attestation);
-        setCurrentPhase("completed");
         break;
-      //   case "retrieve":
-      //     const retrieved = await simulateTransaction("Retrieval");
-      //     if (retrieved) setCurrentPhase("completed");
-      //     break;
     }
   };
 
+  const getButtonConfig = () => {
+    const baseStyle = "mt-4 px-4 py-2 rounded font-medium transition-colors";
+
+    switch (currentPhase) {
+      case "checkChain":
+        return {
+          text: chainId === targetChain ? "Check Complete" : "Switch Network",
+          className:
+            chainId === targetChain
+              ? `${baseStyle} bg-green-500 text-white`
+              : `${baseStyle} bg-blue-500 text-white hover:bg-blue-600`,
+          disabled: txStatus === "processing" || chainId === targetChain,
+        };
+      case "approve":
+        return {
+          text: "Approve Transaction",
+          className: `${baseStyle} bg-purple-500 text-white hover:bg-purple-600`,
+          disabled: txStatus === "processing",
+        };
+      case "burn":
+        return {
+          text: "Burn Tokens",
+          className: `${baseStyle} bg-red-500 text-white hover:bg-red-600`,
+          disabled: txStatus === "processing",
+        };
+      case "mint":
+        return {
+          text: "Retrieve Information",
+          className: `${baseStyle} bg-green-600 text-white hover:bg-green-700`,
+          disabled: txStatus === "processing",
+        };
+      case "completed":
+        return {
+          text: "All Steps Completed!",
+          className: `${baseStyle} bg-gray-100 text-gray-700`,
+          disabled: true,
+        };
+      default:
+        return {
+          text: "Aggregate Action",
+          className: baseStyle,
+          disabled: true,
+        };
+    }
+  };
+
+  const disabledStyle = "bg-gray-300 text-gray-500 cursor-not-allowed";
+  const { text, className, disabled } = getButtonConfig();
+
   return (
-    <button
-      onClick={handleNextPhase}
-      className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
-    >
-      {currentPhase}
-    </button>
+    <>
+      {error && (
+        <div className="mt-4 p-3 bg-red-100 text-red-700 rounded">
+          Error: {error}
+        </div>
+      )}
+
+      <button
+        onClick={handleNextPhase}
+        disabled={disabled}
+        className={`${className} ${disabled ? disabledStyle : ""}`}
+      >
+        {txStatus === "processing" ? (
+          <span className="flex items-center gap-2">
+            <span className="animate-spin">⏳</span>
+            Processing...
+          </span>
+        ) : (
+          text
+        )}
+      </button>
+    </>
   );
 };
 
