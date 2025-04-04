@@ -74,47 +74,6 @@ const Home: NextPage = () => {
     console.log(`USDC Approval Tx: ${approveTx}`);
   }
 
-  async function burnUSDC() {
-    if (!sepoliaClient) return;
-
-    console.log("Burning USDC on Ethereum Sepolia...");
-    const burnTx = await sepoliaClient.sendTransaction({
-      to: ETHEREUM_SEPOLIA_TOKEN_MESSENGER,
-      data: encodeFunctionData({
-        abi: [
-          {
-            type: "function",
-            name: "depositForBurn",
-            stateMutability: "nonpayable",
-            inputs: [
-              { name: "amount", type: "uint256" },
-              { name: "destinationDomain", type: "uint32" },
-              { name: "mintRecipient", type: "bytes32" },
-              { name: "burnToken", type: "address" },
-              { name: "destinationCaller", type: "bytes32" },
-              { name: "maxFee", type: "uint256" },
-              { name: "minFinalityThreshold", type: "uint32" },
-            ],
-            outputs: [],
-          },
-        ],
-        functionName: "depositForBurn",
-        args: [
-          BigInt(10), // AMOUNT
-          AVALANCHE_FUJI_DOMAIN,
-          addressToBytes32(userAddress!),
-          USDC_TESTNET[sepolia.id] as Address,
-          addressToBytes32(userAddress!),
-          MAX_FEE_PARAMETER,
-          1000, // minFinalityThreshold (1000 or less for Fast Transfer)
-        ],
-      }),
-    } as unknown as Parameters<typeof sepoliaClient.sendTransaction>[0]);
-
-    console.log(`Burn Tx: ${burnTx}`);
-    return burnTx;
-  }
-
   async function retrieveAttestation(transactionHash: string) {
     console.log("Retrieving attestation...");
     const url = `https://iris-api-sandbox.circle.com/v2/messages/${ETHEREUM_SEPOLIA_DOMAIN}?transactionHash=${transactionHash}`;

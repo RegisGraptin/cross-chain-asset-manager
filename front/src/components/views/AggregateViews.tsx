@@ -1,20 +1,11 @@
 "use client";
 
-import type { NextPage } from "next";
-import { useEffect, useState } from "react";
-import Header from "../../components/Header";
-import {
-  useAccount,
-  useSwitchChain,
-  useWaitForTransactionReceipt,
-  useWalletClient,
-  useWriteContract,
-} from "wagmi";
+import { useState } from "react";
+import { useAccount, useSwitchChain, useWalletClient } from "wagmi";
 import { AssetTokenSelect } from "../../components/token/AssetTokenSelect";
 import { TOKEN_ASSETS, USDC_TESTNET } from "../../utils/tokens";
-import { useAllBalances, useBalances } from "../../hooks/user";
-import { chainsInformation } from "../../utils/wagmi";
-import { arbitrum, avalancheFuji, sepolia } from "viem/chains";
+
+import { avalancheFuji, sepolia } from "viem/chains";
 import { Address, encodeFunctionData } from "viem";
 import {
   addressToBytes32,
@@ -25,6 +16,8 @@ import {
   MAX_FEE_PARAMETER,
 } from "../../utils/circle";
 import { DisplayTestnetBalance } from "../../components/token/DisplayTestnetBalance";
+import { ChainSelect } from "../chain/ChainSelect";
+import AggregateAction from "../actions/AggregateAction";
 
 const AggregateView = () => {
   const { address: userAddress, chainId } = useAccount();
@@ -32,6 +25,8 @@ const AggregateView = () => {
   const [selectedToken, setSelectedToken] = useState<
     keyof typeof TOKEN_ASSETS | ""
   >("");
+
+  const [selectedChain, setSelectedChain] = useState<Number>();
 
   console.log("Selected token:", selectedToken);
 
@@ -41,76 +36,6 @@ const AggregateView = () => {
   });
 
   const { chains, switchChain } = useSwitchChain();
-
-  async function aggregateLiquidity() {
-    if (!sepoliaClient) return;
-
-    switchChain({ chainId: sepolia.id });
-
-    console.log("Approving USDC transfer...");
-    const approveTx = await sepoliaClient.sendTransaction({
-      to: USDC_TESTNET[sepolia.id] as Address,
-      data: encodeFunctionData({
-        abi: [
-          {
-            type: "function",
-            name: "approve",
-            stateMutability: "nonpayable",
-            inputs: [
-              { name: "spender", type: "address" },
-              { name: "amount", type: "uint256" },
-            ],
-            outputs: [{ name: "", type: "bool" }],
-          },
-        ],
-        functionName: "approve",
-        args: [ETHEREUM_SEPOLIA_TOKEN_MESSENGER, BigInt(10_000 * 6)], // Set max allowance in 10^6 subunits (10,000 USDC; change as needed)
-      }),
-    } as Parameters<typeof sepoliaClient.sendTransaction>[0]);
-
-    console.log(`USDC Approval Tx: ${approveTx}`);
-  }
-
-  async function burnUSDC() {
-    if (!sepoliaClient) return;
-
-    console.log("Burning USDC on Ethereum Sepolia...");
-    const burnTx = await sepoliaClient.sendTransaction({
-      to: ETHEREUM_SEPOLIA_TOKEN_MESSENGER,
-      data: encodeFunctionData({
-        abi: [
-          {
-            type: "function",
-            name: "depositForBurn",
-            stateMutability: "nonpayable",
-            inputs: [
-              { name: "amount", type: "uint256" },
-              { name: "destinationDomain", type: "uint32" },
-              { name: "mintRecipient", type: "bytes32" },
-              { name: "burnToken", type: "address" },
-              { name: "destinationCaller", type: "bytes32" },
-              { name: "maxFee", type: "uint256" },
-              { name: "minFinalityThreshold", type: "uint32" },
-            ],
-            outputs: [],
-          },
-        ],
-        functionName: "depositForBurn",
-        args: [
-          BigInt(10), // AMOUNT
-          AVALANCHE_FUJI_DOMAIN,
-          addressToBytes32(userAddress!),
-          USDC_TESTNET[sepolia.id] as Address,
-          addressToBytes32(userAddress!),
-          MAX_FEE_PARAMETER,
-          1000, // minFinalityThreshold (1000 or less for Fast Transfer)
-        ],
-      }),
-    } as unknown as Parameters<typeof sepoliaClient.sendTransaction>[0]);
-
-    console.log(`Burn Tx: ${burnTx}`);
-    return burnTx;
-  }
 
   async function retrieveAttestation(transactionHash: string) {
     console.log("Retrieving attestation...");
@@ -171,6 +96,7 @@ const AggregateView = () => {
         <main className="p-4 bg-white rounded-lg shadow-md">
           <section className="container grid grid-cols-2 gap-4">
             <div className="w-100 mx-auto">
+              <h2 className="text-xl font-semibold mb-2">Assets</h2>
               <AssetTokenSelect
                 tokens={Object.values(TOKEN_ASSETS)}
                 selected={selectedToken}
@@ -185,36 +111,16 @@ const AggregateView = () => {
             </div>
 
             <div>
-              <h2>Aggregate liquidity</h2>
-              <div className="mt-4">
-                <label
-                  htmlFor="chain-select"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Select Chain:
-                </label>
-                <select
-                  id="chain-select"
-                  className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  onChange={(e) =>
-                    console.log("Selected Chain ID:", e.target.value)
-                  }
-                >
-                  <option value="">Select a chain</option>
-                  {Object.entries(chainsInformation).map(([id, chain]) => (
-                    <option key={id} value={id}>
-                      {chain.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button
-                onClick={() => aggregateLiquidity()}
-                className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
-              >
-                Aggregate
-              </button>
+              <h2 className="text-xl font-semibold mb-2">Target Chain</h2>
+              <ChainSelect
+                selected={selectedChain}
+                onChange={(value) => {
+                  setSelectedChain(value);
+                }}
+              />
             </div>
+
+            <AggregateAction targetChain={selectedChain} />
           </section>
         </main>
       </div>
