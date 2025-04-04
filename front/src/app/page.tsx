@@ -4,6 +4,8 @@ import type { NextPage } from "next";
 import { useEffect, useState } from "react";
 import Header from "../components/Header";
 import { useAccount } from "wagmi";
+import { AssetTokenSelect } from "../components/token/AssetTokenSelect";
+import { SEPOLIA_TOKEN_ASSETS } from "../utils/tokens";
 
 // Update the getTokenData function to include USDC, WETH, WBTC
 const getTokenData = () => {
@@ -30,9 +32,18 @@ const Home: NextPage = () => {
     return data;
   }
 
+  const [isLoading, setIsLoading] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+
   useEffect(() => {
-    if (userAddress) {
-      getCurrentValue(userAddress, "1");
+    if (userAddress && !isComplete && !isLoading) {
+      setIsLoading(true);
+
+      getCurrentValue(userAddress, "1").then((data) => {
+        console.log(data);
+        setIsLoading(false);
+        setIsComplete(true);
+      });
     }
   }, [userAddress]);
 
@@ -53,29 +64,17 @@ const Home: NextPage = () => {
     <>
       <Header />
 
-      <div className="container mx-auto">
-        <main className="mx-auto w-full max-w-md p-4 bg-white rounded-lg shadow-md">
-          <section className="container mx-auto grid grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="token-select"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Select a token:
-              </label>
-              <select
-                id="token-select"
-                value={selectedToken}
-                onChange={handleTokenChange}
-                className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              >
-                <option value="">--Please choose a token--</option>
-                {tokenData.map((token) => (
-                  <option key={token.token} value={token.token}>
-                    {token.token}
-                  </option>
-                ))}
-              </select>
+      <div className="container mx-auto pt-20">
+        <main className="p-4 bg-white rounded-lg shadow-md">
+          <section className="container grid grid-cols-2 gap-4">
+            <div className="w-100 mx-auto">
+              <AssetTokenSelect
+                tokens={Object.values(SEPOLIA_TOKEN_ASSETS)}
+                selected={selectedToken}
+                onChange={(value) => {
+                  setSelectedToken(value);
+                }}
+              />
 
               {selectedToken && (
                 <div className="mt-4">

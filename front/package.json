@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.1",
     "@rainbow-me/rainbowkit": "^2.2.4",
     "@tailwindcss/postcss": "^4.1.2",
     "@tanstack/react-query": "^5.71.10",
@@ -15,6 +16,7 @@
     "postcss": "^8.5.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-icons": "^5.5.0",
     "tailwindcss": "^4.1.2",
     "viem": "2.23.3",
     "wagmi": "^2.14.16"
