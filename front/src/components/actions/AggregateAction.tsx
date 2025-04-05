@@ -25,6 +25,8 @@ const AggregateAction = ({
   originChain: number;
   targetChain: number;
   bridgeAmount: bigint;
+  currentPhase: Phase;
+  setCurrentPhase: (phase: Phase) => void;
 }) => {
   const [txStatus, setTxStatus] = useState<TransactionStatus>("idle");
   const [error, setError] = useState<string | null>(null);
