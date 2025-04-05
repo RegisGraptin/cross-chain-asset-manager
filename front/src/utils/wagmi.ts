@@ -26,9 +26,10 @@ export const TESTNET = {
   [avalancheFuji.id]: avalancheFuji,
 };
 
-export const chainsInformation = process.env.NEXT_PUBLIC_TESTNET
-  ? TESTNET
-  : MAINNET;
+export const chainsInformation =
+  typeof window !== "undefined" && window.location.href.includes("testnet")
+    ? TESTNET
+    : MAINNET;
 
 export const config = getDefaultConfig({
   appName: "RainbowKit App",

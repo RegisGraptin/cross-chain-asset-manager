@@ -15,6 +15,7 @@ import { ChainSelect } from "../chain/ChainSelect";
 import AggregateAction from "../actions/AggregateAction";
 import { Address, formatUnits, parseUnits } from "viem";
 import { useAccount, useBalance } from "wagmi";
+import { TimelineWorkflow } from "../widgets/TimelineWorkflow";
 
 const AggregateView = () => {
   const [selectedToken, setSelectedToken] = useState<
@@ -25,6 +26,7 @@ const AggregateView = () => {
   const [targetChain, setTargetChain] = useState<number>();
   const [maxValue, setMaxValue] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
+  const [currentPhase, setCurrentPhase] = useState<string>("");
 
   const { address: userAddress } = useAccount();
 
@@ -117,13 +119,21 @@ const AggregateView = () => {
                     <span className="font-medium text-gray-700">USDC</span>
                   </div>
                 </div>
-                <div>
+                <div className="pt-5">
                   <AggregateAction
                     originChain={originChain}
                     targetChain={targetChain}
                     bridgeAmount={parseUnits(amount, 6)}
+                    currentPhase={currentPhase}
+                    setCurrentPhase={setCurrentPhase}
                   />
                 </div>
+              </div>
+            )}
+
+            {selectedToken && (
+              <div className="col-span-2">
+                <TimelineWorkflow currentPhase={currentPhase} />
               </div>
             )}
           </section>

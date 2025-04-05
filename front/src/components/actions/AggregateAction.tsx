@@ -19,12 +19,13 @@ const AggregateAction = ({
   originChain,
   targetChain,
   bridgeAmount,
+  currentPhase,
+  setCurrentPhase,
 }: {
   originChain: number;
   targetChain: number;
   bridgeAmount: bigint;
 }) => {
-  const [currentPhase, setCurrentPhase] = useState<Phase>("checkChain");
   const [txStatus, setTxStatus] = useState<TransactionStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -44,10 +45,16 @@ const AggregateAction = ({
   // Auto-advance phase when chain is correct
   useEffect(() => {
     console.log(chainId, targetChain);
-    if (currentPhase === "checkChain" && chainId !== targetChain) {
+    if (
+      (currentPhase === "checkChain" || currentPhase === "") &&
+      chainId !== targetChain
+    ) {
       setCurrentPhase("approve");
     }
-    if (currentPhase === "approve" && chainId === targetChain) {
+    if (
+      (currentPhase === "approve" || currentPhase === "") &&
+      chainId === targetChain
+    ) {
       setCurrentPhase("checkChain");
     }
   }, [chainId, targetChain, currentPhase]);
@@ -55,6 +62,7 @@ const AggregateAction = ({
   const approveTransaction = async () => {
     if (!client[originChain]) return;
     console.log("Approving USDC transfer...");
+    console.log(bridgeAmount);
     const approveTx = await client[originChain].sendTransaction({
       to: USDC_ADDRESS[originChain],
       data: encodeFunctionData({
@@ -81,7 +89,6 @@ const AggregateAction = ({
   async function burnUSDC() {
     if (!client[originChain]) return;
 
-    console.log("Burning USDC on Ethereum Sepolia...");
     const burnTx = await client[originChain].sendTransaction({
       to: TOKEN_MESSENGER_ADDRESSES[originChain],
       data: encodeFunctionData({
@@ -203,49 +210,39 @@ const AggregateAction = ({
   };
 
   const getButtonConfig = () => {
-    const baseStyle = "mt-4 px-4 py-2 rounded font-medium transition-colors";
-
     switch (currentPhase) {
       case "checkChain":
         return {
-          text: chainId === targetChain ? "Check Complete" : "Switch Network",
-          className:
-            chainId === targetChain
-              ? `${baseStyle} bg-green-500 text-white`
-              : `${baseStyle} bg-blue-500 text-white hover:bg-blue-600`,
+          text: "Switch Network",
         };
       case "approve":
         return {
           text: "Approve Transaction",
-          className: `${baseStyle} bg-purple-500 text-white hover:bg-purple-600`,
         };
       case "burn":
         return {
           text: "Burn Tokens",
-          className: `${baseStyle} bg-red-500 text-white hover:bg-red-600`,
         };
       case "mint":
         return {
-          text: "Retrieve Information",
-          className: `${baseStyle} bg-green-600 text-white hover:bg-green-700`,
+          text: "Mint tokens",
         };
       case "completed":
         return {
           text: "All Steps Completed!",
-          className: `${baseStyle} bg-gray-100 text-gray-700`,
+
           disabled: true,
         };
       default:
         return {
           text: "Aggregate Action",
-          className: baseStyle,
           disabled: true,
         };
     }
   };
 
   const disabledStyle = "bg-gray-300 text-gray-500 cursor-not-allowed";
-  const { text, className, disabled } = getButtonConfig();
+  const { text, disabled } = getButtonConfig();
 
   return (
     <>
@@ -256,9 +253,9 @@ const AggregateAction = ({
       )}
 
       <button
+        className="w-full sm:w-auto px-8 py-2 bg-transparent border-2 border-gray-300 hover:border-blue-600 rounded-xl text-lg font-semibold text-gray-900 flex items-center justify-center gap-2 hover:bg-gray-50 transition-all"
         onClick={handleNextPhase}
         disabled={disabled}
-        className={`${className} ${disabled ? disabledStyle : ""}`}
       >
         {txStatus === "processing" ? (
           <span className="flex items-center gap-2">
