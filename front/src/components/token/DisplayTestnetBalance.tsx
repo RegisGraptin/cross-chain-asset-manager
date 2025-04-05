@@ -5,7 +5,7 @@ import { avalancheFuji, sepolia } from "viem/chains";
 import { useAccount, useBalance } from "wagmi";
 import { formatBalance } from "../../utils/tokens";
 
-const TOKENS = [
+export const TOKENS = [
   {
     chain: sepolia,
     address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",

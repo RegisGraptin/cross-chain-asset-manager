@@ -1,99 +1,45 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
-import { useAccount, useSwitchChain, useWalletClient } from "wagmi";
 import { AssetTokenSelect } from "../../components/token/AssetTokenSelect";
-import { TOKEN_ASSETS, USDC_TESTNET } from "../../utils/tokens";
+import { TOKEN_ASSETS } from "../../utils/tokens";
 
 import { avalancheFuji, sepolia } from "viem/chains";
-import { Address, encodeFunctionData } from "viem";
+
 import {
-  addressToBytes32,
-  AVALANCHE_FUJI_DOMAIN,
-  AVALANCHE_FUJI_MESSAGE_TRANSMITTER,
-  ETHEREUM_SEPOLIA_DOMAIN,
-  ETHEREUM_SEPOLIA_TOKEN_MESSENGER,
-  MAX_FEE_PARAMETER,
-} from "../../utils/circle";
-import { DisplayTestnetBalance } from "../../components/token/DisplayTestnetBalance";
+  DisplayTestnetBalance,
+  TOKENS,
+} from "../../components/token/DisplayTestnetBalance";
 import { ChainSelect } from "../chain/ChainSelect";
 import AggregateAction from "../actions/AggregateAction";
+import { Address, formatUnits, parseUnits } from "viem";
+import { useAccount, useBalance } from "wagmi";
 
 const AggregateView = () => {
-  const { address: userAddress, chainId } = useAccount();
-
   const [selectedToken, setSelectedToken] = useState<
     keyof typeof TOKEN_ASSETS | ""
   >("");
 
-  const [selectedChain, setSelectedChain] = useState<Number>();
+  const [originChain, setOriginChain] = useState<number>();
+  const [targetChain, setTargetChain] = useState<number>();
+  const [maxValue, setMaxValue] = useState<string>("");
+  const [amount, setAmount] = useState<string>("");
 
-  console.log("Selected token:", selectedToken);
+  const { address: userAddress } = useAccount();
 
-  const { data: sepoliaClient } = useWalletClient({ chainId: sepolia.id });
-  const { data: avalancheClient } = useWalletClient({
-    chainId: avalancheFuji.id,
-  });
-
-  const { chains, switchChain } = useSwitchChain();
-
-  async function retrieveAttestation(transactionHash: string) {
-    console.log("Retrieving attestation...");
-    const url = `https://iris-api-sandbox.circle.com/v2/messages/${ETHEREUM_SEPOLIA_DOMAIN}?transactionHash=${transactionHash}`;
-    while (true) {
-      try {
-        const response = await fetch(url);
-        if (response.status === 404) {
-          console.log("Waiting for attestation...");
-        }
-        const responseData = await response.json();
-        if (responseData?.messages?.[0]?.status === "complete") {
-          console.log("Attestation retrieved successfully!");
-          return responseData.messages[0];
-        }
-        console.log("Waiting for attestation...");
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-      } catch (error) {
-        if (error instanceof Error) {
-          console.error("Error fetching attestation:", error.message);
-        } else {
-          console.error("Error fetching attestation:", error);
-        }
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-      }
-    }
-  }
-
-  async function mintUSDC(attestation: any) {
-    if (!avalancheClient) return;
-
-    console.log("Minting USDC on Avalanche Fuji...");
-    const mintTx = await avalancheClient.sendTransaction({
-      to: AVALANCHE_FUJI_MESSAGE_TRANSMITTER,
-      data: encodeFunctionData({
-        abi: [
-          {
-            type: "function",
-            name: "receiveMessage",
-            stateMutability: "nonpayable",
-            inputs: [
-              { name: "message", type: "bytes" },
-              { name: "attestation", type: "bytes" },
-            ],
-            outputs: [],
-          },
-        ],
-        functionName: "receiveMessage",
-        args: [attestation.message, attestation.attestation],
-      }),
-    } as Parameters<typeof avalancheClient.sendTransaction>[0]);
-    console.log(`Mint Tx: ${mintTx}`);
-  }
+  const balances = TOKENS.map(({ chain, address }) =>
+    useBalance({
+      address: userAddress,
+      token: address as Address,
+      chainId: chain.id,
+    })
+  );
 
   return (
     <>
       <div className="container mx-auto pt-20">
-        <main className="p-4 bg-white rounded-lg shadow-md">
+        <main className="p-4 bg-white rounded-lg shadow-md min-h-64">
           <section className="container grid grid-cols-2 gap-4">
             <div className="w-100 mx-auto">
               <h2 className="text-xl font-semibold mb-2">Assets</h2>
@@ -110,17 +56,76 @@ const AggregateView = () => {
               <DisplayTestnetBalance token={TOKEN_ASSETS[selectedToken]} />
             </div>
 
-            <div>
-              <h2 className="text-xl font-semibold mb-2">Target Chain</h2>
-              <ChainSelect
-                selected={selectedChain}
-                onChange={(value) => {
-                  setSelectedChain(value);
-                }}
-              />
-            </div>
+            {selectedToken && (
+              <div>
+                <h2 className="text-xl font-semibold mb-2">Target Chain</h2>
+                <ChainSelect
+                  selected={targetChain}
+                  onChange={(value) => {
+                    setTargetChain(value);
+                    if (value === sepolia.id) {
+                      setOriginChain(avalancheFuji.id);
+                    }
+                    if (value === avalancheFuji.id) {
+                      setOriginChain(sepolia.id);
+                    }
+                    const id = value === sepolia.id ? 0 : 1;
+                    setAmount(
+                      formatUnits(
+                        balances[id].data?.value || BigInt(0),
+                        6
+                      ).toString()
+                    );
+                    setMaxValue(balances[id].data?.value.toString() || "0");
+                  }}
+                />
 
-            <AggregateAction targetChain={selectedChain} />
+                {/* Amount selection */}
+                <div className="pt-2 flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-500">Amount</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-500">Available</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      {formatUnits(maxValue, 6)}
+                    </span>
+                    <button
+                      onClick={() => setAmount(formatUnits(maxValue, 6))}
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Max
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-gray-300 focus-within:border-blue-500 transition-colors">
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0.00"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="w-full bg-transparent text-xl font-medium text-gray-900 focus:outline-none"
+                  />
+                  <div className="flex items-center space-x-2 mr-2">
+                    <Image
+                      src={`/images/tokens/usdc.svg`}
+                      alt={`USDC icon`}
+                      className="h-6 w-6"
+                      width={24}
+                      height={24}
+                    />
+                    <span className="font-medium text-gray-700">USDC</span>
+                  </div>
+                </div>
+                <div>
+                  <AggregateAction
+                    originChain={originChain}
+                    targetChain={targetChain}
+                    bridgeAmount={parseUnits(amount, 6)}
+                  />
+                </div>
+              </div>
+            )}
           </section>
         </main>
       </div>

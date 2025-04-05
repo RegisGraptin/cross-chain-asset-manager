@@ -1,32 +1,45 @@
 import { useEffect, useState } from "react";
-import { avalancheFuji, sepolia } from "viem/chains";
+import { avalanche, avalancheFuji, sepolia } from "viem/chains";
 import { useAccount, useSwitchChain, useWalletClient } from "wagmi";
-import { USDC_TESTNET } from "../../utils/tokens";
-import { Address, encodeFunctionData } from "viem";
+import { encodeFunctionData } from "viem";
 import {
   addressToBytes32,
-  AVALANCHE_FUJI_DOMAIN,
-  AVALANCHE_FUJI_MESSAGE_TRANSMITTER,
-  ETHEREUM_SEPOLIA_DOMAIN,
-  ETHEREUM_SEPOLIA_TOKEN_MESSENGER,
+  CIRCLE_DOMAIN_ID,
+  DESTINATION_CALLER_BYTES32,
   MAX_FEE_PARAMETER,
+  MESSAGE_TRANSMITTER_ADDRESSES,
+  TOKEN_MESSENGER_ADDRESSES,
+  USDC_ADDRESS,
 } from "../../utils/circle";
 
 type Phase = "checkChain" | "approve" | "burn" | "mint" | "completed";
 type TransactionStatus = "idle" | "processing" | "success" | "error";
 
-const AggregateAction = ({ targetChain }: { targetChain: number }) => {
+const AggregateAction = ({
+  originChain,
+  targetChain,
+  bridgeAmount,
+}: {
+  originChain: number;
+  targetChain: number;
+  bridgeAmount: bigint;
+}) => {
   const [currentPhase, setCurrentPhase] = useState<Phase>("checkChain");
   const [txStatus, setTxStatus] = useState<TransactionStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
   const { address: userAddress, chainId } = useAccount();
-  const { chains, switchChain } = useSwitchChain();
+  const { switchChain } = useSwitchChain();
 
   const { data: sepoliaClient } = useWalletClient({ chainId: sepolia.id });
   const { data: avalancheClient } = useWalletClient({
     chainId: avalancheFuji.id,
   });
+
+  const client = {
+    [sepolia.id]: sepoliaClient,
+    [avalancheFuji.id]: avalancheClient,
+  };
 
   // Auto-advance phase when chain is correct
   useEffect(() => {
@@ -39,22 +52,11 @@ const AggregateAction = ({ targetChain }: { targetChain: number }) => {
     }
   }, [chainId, targetChain, currentPhase]);
 
-  const handleSwitchChain = async (destChain) => {
-    setTxStatus("processing");
-    try {
-      await switchChain({ chainId: destChain.id });
-      setTxStatus("success");
-    } catch (err) {
-      setError(err.shortMessage || err.message);
-      setTxStatus("error");
-    }
-  };
-
   const approveTransaction = async () => {
-    if (!sepoliaClient) return;
+    if (!client[originChain]) return;
     console.log("Approving USDC transfer...");
-    const approveTx = await sepoliaClient.sendTransaction({
-      to: USDC_TESTNET[sepolia.id] as Address,
+    const approveTx = await client[originChain].sendTransaction({
+      to: USDC_ADDRESS[originChain],
       data: encodeFunctionData({
         abi: [
           {
@@ -69,21 +71,19 @@ const AggregateAction = ({ targetChain }: { targetChain: number }) => {
           },
         ],
         functionName: "approve",
-        args: [ETHEREUM_SEPOLIA_TOKEN_MESSENGER, BigInt(10_000 * 6)], // Set max allowance in 10^6 subunits (10,000 USDC; change as needed)
+        args: [TOKEN_MESSENGER_ADDRESSES[originChain], bridgeAmount], // Set max allowance in 10^6 subunits (10,000 USDC; change as needed)
       }),
-    } as Parameters<typeof sepoliaClient.sendTransaction>[0]);
+    });
 
     console.log(`USDC Approval Tx: ${approveTx}`);
   };
 
   async function burnUSDC() {
-    if (!sepoliaClient) return;
-
-    console.log(addressToBytes32(userAddress!));
+    if (!client[originChain]) return;
 
     console.log("Burning USDC on Ethereum Sepolia...");
-    const burnTx = await sepoliaClient.sendTransaction({
-      to: ETHEREUM_SEPOLIA_TOKEN_MESSENGER,
+    const burnTx = await client[originChain].sendTransaction({
+      to: TOKEN_MESSENGER_ADDRESSES[originChain],
       data: encodeFunctionData({
         abi: [
           {
@@ -104,16 +104,16 @@ const AggregateAction = ({ targetChain }: { targetChain: number }) => {
         ],
         functionName: "depositForBurn",
         args: [
-          BigInt(10_000), // AMOUNT
-          AVALANCHE_FUJI_DOMAIN,
+          bridgeAmount, // AMOUNT
+          CIRCLE_DOMAIN_ID[targetChain],
           addressToBytes32(userAddress!),
-          USDC_TESTNET[sepolia.id] as Address,
-          addressToBytes32(userAddress!),
+          USDC_ADDRESS[originChain],
+          DESTINATION_CALLER_BYTES32, // Allow any one to call it
           MAX_FEE_PARAMETER,
           1000, // minFinalityThreshold (1000 or less for Fast Transfer)
         ],
       }),
-    } as unknown as Parameters<typeof sepoliaClient.sendTransaction>[0]);
+    });
 
     console.log(`Burn Tx: ${burnTx}`);
     return burnTx;
@@ -121,7 +121,8 @@ const AggregateAction = ({ targetChain }: { targetChain: number }) => {
 
   async function retrieveAttestation(transactionHash: string) {
     console.log("Retrieving attestation...");
-    const url = `https://iris-api-sandbox.circle.com/v2/messages/${ETHEREUM_SEPOLIA_DOMAIN}?transactionHash=${transactionHash}`;
+    const origin = CIRCLE_DOMAIN_ID[originChain];
+    const url = `https://iris-api-sandbox.circle.com/v2/messages/${origin}?transactionHash=${transactionHash}`;
     while (true) {
       try {
         const response = await fetch(url);
@@ -147,11 +148,11 @@ const AggregateAction = ({ targetChain }: { targetChain: number }) => {
   }
 
   async function mintUSDC(attestation: any) {
-    if (!avalancheClient) return;
+    if (!client[targetChain]) return;
 
     console.log("Minting USDC on Avalanche Fuji...");
-    const mintTx = await avalancheClient.sendTransaction({
-      to: AVALANCHE_FUJI_MESSAGE_TRANSMITTER,
+    const mintTx = await client[targetChain].sendTransaction({
+      to: MESSAGE_TRANSMITTER_ADDRESSES[targetChain],
       data: encodeFunctionData({
         abi: [
           {
@@ -168,17 +169,17 @@ const AggregateAction = ({ targetChain }: { targetChain: number }) => {
         functionName: "receiveMessage",
         args: [attestation.message, attestation.attestation],
       }),
-    } as Parameters<typeof avalancheClient.sendTransaction>[0]);
+    });
     console.log(`Mint Tx: ${mintTx}`);
   }
+
+  const [attestation, setAttestation] = useState<any>(null);
 
   const handleNextPhase = async () => {
     switch (currentPhase) {
       case "checkChain":
         if (chainId === targetChain) {
-          await handleSwitchChain(
-            targetChain === sepolia.id ? avalancheFuji : sepolia
-          );
+          await switchChain({ chainId: originChain });
           setCurrentPhase("approve");
         }
         break;
@@ -188,15 +189,15 @@ const AggregateAction = ({ targetChain }: { targetChain: number }) => {
         break;
       case "burn":
         const burnTx = await burnUSDC();
-        // Other phase?
-        const attestation = await retrieveAttestation(burnTx as string);
-        console.log(attestation);
+        const _attestation = await retrieveAttestation(burnTx as string);
+        setAttestation(_attestation);
 
         setCurrentPhase("mint");
-        await handleSwitchChain(
-          targetChain === sepolia.id ? sepolia : avalancheFuji
-        );
+        await switchChain({ chainId: targetChain });
+        break;
+      case "mint":
         await mintUSDC(attestation);
+        setCurrentPhase("completed");
         break;
     }
   };
@@ -212,25 +213,21 @@ const AggregateAction = ({ targetChain }: { targetChain: number }) => {
             chainId === targetChain
               ? `${baseStyle} bg-green-500 text-white`
               : `${baseStyle} bg-blue-500 text-white hover:bg-blue-600`,
-          disabled: txStatus === "processing" || chainId === targetChain,
         };
       case "approve":
         return {
           text: "Approve Transaction",
           className: `${baseStyle} bg-purple-500 text-white hover:bg-purple-600`,
-          disabled: txStatus === "processing",
         };
       case "burn":
         return {
           text: "Burn Tokens",
           className: `${baseStyle} bg-red-500 text-white hover:bg-red-600`,
-          disabled: txStatus === "processing",
         };
       case "mint":
         return {
           text: "Retrieve Information",
           className: `${baseStyle} bg-green-600 text-white hover:bg-green-700`,
-          disabled: txStatus === "processing",
         };
       case "completed":
         return {
