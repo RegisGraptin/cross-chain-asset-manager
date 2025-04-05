@@ -65,3 +65,88 @@ export function useAllBalances(userAddress: string | undefined) {
 
   return { data, loading, error };
 }
+
+export function usePortfolio(userAddress: string | undefined) {
+  const [data, setData] = useState<{}>({});
+  const [isLoading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  async function fetchData() {
+    const res = await fetch("/api/portfolio", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ userAddress }),
+    });
+
+    if (!res.ok) throw new Error(`Failed to fetch data for chain`);
+    const result = await res.json();
+
+    setData(result);
+  }
+
+  useEffect(() => {
+    if (!userAddress) return;
+
+    const fetchAllData = async () => {
+      // setLoading(true);
+      setData({});
+      setError(null);
+
+      try {
+        const chainIds = Object.keys(chainsInformation);
+        const promises = await fetchData();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllData();
+  }, [userAddress]);
+
+  return { data, isLoading, error };
+}
+
+export function usePortfolioProfitAndLoss(userAddress: string | undefined) {
+  const [data, setData] = useState<{}>({});
+  const [isLoading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  async function fetchData() {
+    const res = await fetch("/api/profitAndLoss", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ userAddress }),
+    });
+
+    if (!res.ok) throw new Error(`Failed to fetch data for chain`);
+    const result = await res.json();
+
+    console.log("Profit and Loss Data:", result);
+
+    setData(result);
+  }
+
+  useEffect(() => {
+    if (!userAddress) return;
+
+    const fetchAllData = async () => {
+      // setLoading(true);
+      setData({});
+      setError(null);
+
+      try {
+        await fetchData();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllData();
+  }, [userAddress]);
+
+  return { data, isLoading, error };
+}

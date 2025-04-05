@@ -8,8 +8,11 @@ import {
 import { arbitrumSepolia, avalancheFuji, sepolia } from "viem/chains";
 import { USDC_TESTNET } from "./tokens";
 
+// TODO:: Defined potential other chains
+// developers.circle.com/stablecoins/evm-smart-contracts
+
 // Chain-specific Parameters
-export const CIRCLE_DOMAIN_ID: Record<number, number> = {
+https: export const CIRCLE_DOMAIN_ID: Record<number, number> = {
   [sepolia.id]: 0, // Source domain ID for Ethereum Sepolia testnet
   [avalancheFuji.id]: 1, // Destination domain ID for Avalanche Fuji testnet
 };
