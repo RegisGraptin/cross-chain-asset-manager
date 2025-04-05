@@ -71,7 +71,7 @@ const AggregateView = () => {
                     if (value === avalancheFuji.id) {
                       setOriginChain(sepolia.id);
                     }
-                    const id = value === sepolia.id ? 0 : 1;
+                    const id = value === sepolia.id ? 1 : 0;
                     setAmount(
                       formatUnits(
                         balances[id].data?.value || BigInt(0),
