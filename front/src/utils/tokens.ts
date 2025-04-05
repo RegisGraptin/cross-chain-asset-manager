@@ -43,6 +43,24 @@ export const TOKEN_ASSETS = {
   },
 };
 
+export const ALL_TOKEN_ASSETS = {
+  USDC: {
+    name: "USDC",
+    symbol: "USDC",
+    data: process.env.NEXT_PUBLIC_TESTNET ? USDC_TESTNET : USDC_MAINNET,
+  },
+  LINK: {
+    name: "LINK",
+    symbol: "LINK",
+    data: "",
+  },
+  WETH: {
+    name: "WETH",
+    symbol: "WETH",
+    data: "",
+  },
+};
+
 export const formatBalance = (value?: bigint, decimals?: number) => {
   if (!value || decimals === undefined) return "0";
 

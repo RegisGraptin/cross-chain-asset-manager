@@ -1,5 +1,6 @@
 import { VIEW_TABS } from "../Navigation";
 import AggregateView from "./AggregateViews";
+import SendingView from "./SendingView";
 
 const ViewManager = ({ activeTab }) => {
   const activeIndex = VIEW_TABS.indexOf(activeTab);
@@ -16,6 +17,9 @@ const ViewManager = ({ activeTab }) => {
         >
           <div className="w-full flex-shrink-0 p-4">
             <AggregateView />
+          </div>
+          <div className="w-full flex-shrink-0 p-4">
+            <SendingView />
           </div>
         </div>
       </div>

@@ -14,6 +14,15 @@ export default function Header() {
           >
             {process.env.NEXT_PUBLIC_APP_NAME}
           </Link>
+          <div className="hidden lg:block">
+            <ul className="flex flex-col gap-2 mt-2 mb-4 lg:mb-0 lg:mt-0 lg:flex-row lg:items-center lg:gap-6">
+              <li className="flex items-center p-1 text-sm gap-x-2 text-slate-600">
+                <Link href="/testnet" className="flex items-center">
+                  Transfer
+                </Link>
+              </li>
+            </ul>
+          </div>
           <ConnectButton />
           <button
             className="relative ml-auto h-6 max-h-[40px] w-6 max-w-[40px] select-none rounded-lg text-center align-middle text-xs font-medium uppercase text-inherit transition-all hover:bg-transparent focus:bg-transparent active:bg-transparent disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none lg:hidden"
