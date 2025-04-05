@@ -6,23 +6,16 @@ import { AssetTokenSelect } from "../token/AssetTokenSelect";
 import { useState } from "react";
 import { ALL_TOKEN_ASSETS, TOKEN_ASSETS } from "../../utils/tokens";
 import { ChainSelect } from "../chain/ChainSelect";
+import { HashLock, NetworkEnum, PresetEnum, SDK } from "@1inch/cross-chain-sdk";
+import { randomBytes } from "crypto";
+
+const sdk = new SDK({
+  url: "https://api.1inch.dev/fusion-plus",
+  authKey: process.env.NEXT_PUBLIC_TOKEN,
+  // blockchainProvider: new PrivateKeyProviderConnector(privateKey, web3), // only required for order creation
+});
 
 const SendingView = () => {
-  //   const sdk = new SDK({
-  //     url: process.env.NEXT_PUBLIC_INCH_PROXY!,
-  //   });
-
-  //   const params = {
-  //     srcChainId: NetworkEnum.ETHEREUM,
-  //     dstChainId: NetworkEnum.GNOSIS,
-  //     srcTokenAddress: "0x6b175474e89094c44da98b954eedeac495271d0f",
-  //     dstTokenAddress: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-  //     amount: "1000000000000000000000",
-  //   };
-
-  //   const quote = sdk.getQuote(params);
-  //   console.log("Quote:", quote);
-
   const { address: userAddress } = useAccount();
 
   async function swapTransfer() {
@@ -53,6 +46,45 @@ const SendingView = () => {
 
     if (!res.ok) throw new Error(`Failed to fetch data for chain`);
     const result = await res.json();
+    console.log(result);
+  }
+
+  async function sendThroughSDK() {
+    const quote = await sdk.getQuote({
+      amount: "10000000",
+      srcChainId: NetworkEnum.POLYGON,
+      dstChainId: NetworkEnum.BINANCE,
+      enableEstimate: true,
+      srcTokenAddress: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f", // USDT
+      dstTokenAddress: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", // BNB
+      walletAddress: userAddress,
+    });
+
+    console.log("fetch quote:", quote);
+
+    const preset = PresetEnum.fast;
+
+    // generate secrets
+    const secrets = Array.from({
+      length: quote.presets[preset].secretsCount,
+    }).map(() => "0x" + randomBytes(32).toString("hex"));
+
+    const hashLock =
+      secrets.length === 1
+        ? HashLock.forSingleFill(secrets[0])
+        : HashLock.forMultipleFills(HashLock.getMerkleLeaves(secrets));
+
+    const secretHashes = secrets.map((s) => HashLock.hashSecret(s));
+
+    // create order
+    const { hash, quoteId, order } = await sdk.createOrder(quote, {
+      walletAddress: userAddress?.toString()!,
+      hashLock,
+      preset,
+      source: "sdk-tutorial",
+      secretHashes,
+    });
+    console.log({ hash }, "order created");
   }
 
   const [originToken, setOriginToken] = useState<
@@ -111,6 +143,7 @@ const SendingView = () => {
               <button
                 className="w-full sm:w-auto px-8 py-2 bg-transparent border-2 border-gray-300 hover:border-blue-600 rounded-xl text-lg font-semibold text-gray-900 flex items-center justify-center gap-2 hover:bg-gray-50 transition-all"
                 onClick={() => swapTransfer()}
+                // onClick={() => sendThroughSDK()}
               >
                 Swap
               </button>

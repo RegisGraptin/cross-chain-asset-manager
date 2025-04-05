@@ -6,7 +6,6 @@ import {
   lineaSepolia,
   sepolia,
 } from "viem/chains";
-import { USDC_TESTNET } from "./tokens";
 
 // TODO:: Defined potential other chains
 // developers.circle.com/stablecoins/evm-smart-contracts
